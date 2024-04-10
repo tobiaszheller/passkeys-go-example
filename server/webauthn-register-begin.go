@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,22 +14,14 @@ func webauthnRegisterBegin(webauthn *webauthn.WebAuthn,
 	sessionDataStore sessionDataStore,
 ) gin.HandlerFunc {
 	return func(ginContext *gin.Context) {
-		type registerRequest struct {
-			Username string `json:"username"`
-		}
-		var req registerRequest
-		err := json.NewDecoder(ginContext.Request.Body).Decode(&req)
+		username, err := usernameFromRequest(ginContext.Request)
 		if err != nil {
 			handleError(ginContext, err, http.StatusBadRequest)
 			return
 		}
-		if req.Username == "" {
-			ginContext.JSON(http.StatusBadRequest, map[string]string{"error": "missing username"})
-			return
-		}
-		user := userStore.GetByName(req.Username)
+		user := userStore.GetByName(username)
 		if user == nil {
-			user = NewUser(req.Username)
+			user = NewUser(username)
 			userStore.Upsert(user)
 		}
 
@@ -40,4 +33,19 @@ func webauthnRegisterBegin(webauthn *webauthn.WebAuthn,
 		sessionDataStore.Add(*sd)
 		ginContext.JSON(http.StatusOK, cc.Response)
 	}
+}
+
+func usernameFromRequest(r *http.Request) (string, error) {
+	type registerRequest struct {
+		Username string `json:"username"`
+	}
+	var req registerRequest
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		return "", err
+	}
+	if req.Username == "" {
+		return "", errors.New("empty username")
+	}
+	return req.Username, nil
 }
