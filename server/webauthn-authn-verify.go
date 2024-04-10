@@ -1,12 +1,9 @@
 package server
 
 import (
-	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-webauthn/webauthn/protocol"
 	webauthnPkg "github.com/go-webauthn/webauthn/webauthn"
 	"github.com/google/uuid"
 )
@@ -16,32 +13,13 @@ func webauthnAuthenticationVerify(webauthn *webauthnPkg.WebAuthn,
 	sessionDataStore sessionDataStore,
 ) gin.HandlerFunc {
 	return func(ginContext *gin.Context) {
-		parsedCRD, err := protocol.ParseCredentialRequestResponse(ginContext.Request)
-		if err != nil {
-			handleError(ginContext, err, http.StatusInternalServerError)
-			return
-		}
-		challenge := parsedCRD.Response.CollectedClientData.Challenge
-		sd := sessionDataStore.Get(challenge)
-		if sd == nil {
-			handleError(ginContext, errors.New("empty session data"), http.StatusInternalServerError)
-			return
-		}
-		sessionDataStore.Delete(challenge)
+		// 1. Parse data from reuqest
+		// 2. Get sessionData from datastore
+		// 3. delete session data
+
 		var user *User
-		cred, err := webauthn.ValidateDiscoverableLogin(func(rawID, userHandle []byte) (webauthnPkg.User, error) {
-			user = userStore.GetByID(string(userHandle))
-			if user == nil {
-				return user, fmt.Errorf("failed to get user")
-			}
-			return user, nil
-		}, *sd, parsedCRD)
-		if err != nil {
-			handleError(ginContext, err, http.StatusInternalServerError)
-			return
-		}
-		// update credentials instead adding one.
-		user.AddCredential(*cred)
+		// 4. validate disc login
+		// 5. add credential to user.
 		userStore.Upsert(user)
 		ginContext.JSON(http.StatusOK, map[string]any{
 			"verified": true,

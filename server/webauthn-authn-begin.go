@@ -11,12 +11,9 @@ func webauthnAuthenticationBegin(webauthn *webauthn.WebAuthn,
 	sessionDataStore sessionDataStore,
 ) gin.HandlerFunc {
 	return func(ginContext *gin.Context) {
-		assertion, sd, err := webauthn.BeginDiscoverableLogin()
-		if err != nil {
-			handleError(ginContext, err, http.StatusInternalServerError)
-			return
-		}
-		sessionDataStore.Add(*sd)
+		// 1. Begin disc login
+		// 2. add sessionData to store.
+
 		ginContext.JSON(http.StatusOK, assertion.Response)
 	}
 }

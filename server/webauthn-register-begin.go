@@ -24,13 +24,9 @@ func webauthnRegisterBegin(webauthn *webauthn.WebAuthn,
 			user = NewUser(username)
 			userStore.Upsert(user)
 		}
+		// 1. being register
+		// 2. add sessionData to store.
 
-		cc, sd, err := webauthn.BeginRegistration(user)
-		if err != nil {
-			handleError(ginContext, err, http.StatusInternalServerError)
-			return
-		}
-		sessionDataStore.Add(*sd)
 		ginContext.JSON(http.StatusOK, cc.Response)
 	}
 }
